@@ -289,6 +289,8 @@ async function fetchScores(){
 
       const{comp,our}=show;
       const op=comp.competitors.find(c=>c.id!==our.id);
+      // Update opponent name dynamically from ESPN
+      ft.opp=op?.team?.shortDisplayName||op?.team?.displayName||op?.team?.name||ft.opp;
       const u=parseInt(our.score)||0,t=parseInt(op?.score)||0;
       const sn=comp.status?.type?.name||"",clk=comp.status?.displayClock||"",per=comp.status?.period||0,det=comp.status?.type?.shortDetail||comp.status?.type?.detail||"";
       if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){ft.st="live";ft.us=u;ft.th=t;ft.clk=clk;ft.per=per;ft.prob=sn==="STATUS_HALFTIME"?wp(u,t,1,"0:00"):wp(u,t,per,clk);ft.det=det}
