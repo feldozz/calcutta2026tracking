@@ -177,6 +177,9 @@ const TEAMS=[
 ];
 const PAY=[{r:1,l:"R64",c:60775},{r:2,l:"R32",c:136744},{r:3,l:"S16",c:288681},{r:4,l:"E8",c:471006},{r:5,l:"F4",c:607750},{r:6,l:"W",c:1033175}];
 
+const SEEDS={"Duke":1,"Siena":16,"Ohio State":8,"TCU":9,"St. John's":5,"Northern Iowa":12,"Louisville":6,"South Florida":11,"UCLA":7,"UCF":10,"UConn":2,"Furman":15,"Michigan State":3,"North Dakota State":14,"Michigan":1,"Howard":16,"UMBC":16,"Kansas":4,"California Baptist":13,"Villanova":8,"Utah State":9,"Wisconsin":5,"High Point":12,"Arkansas":4,"Hawai'i":13,"BYU":6,"Texas":11,"NC State":11,"Gonzaga":3,"Kennesaw State":14,"Purdue":2,"Queens":15,"Arizona":1,"LIU":16,"Virginia":3,"Wright State":14,"Iowa State":2,"Tennessee State":15,"Kentucky":7,"Santa Clara":10,"Alabama":4,"Hofstra":13,"Nebraska":4,"Troy":13,"Illinois":3,"Penn":14,"North Carolina":6,"VCU":11,"Texas Tech":5,"Akron":12,"Houston":2,"Idaho":15,"Florida":1,"Prairie View A&M":16,"Lehigh":16,"Clemson":8,"Iowa":9,"Saint Mary's":7,"Texas A&M":10,"Vanderbilt":5,"McNeese":12,"Miami":7,"Missouri":10,"Georgia":8,"Saint Louis":9,"Tennessee":6,"Miami (OH)":11,"SMU":11};
+function getSeed(name){if(!name)return"";const n=name.replace(/ (Wildcats|Bulldogs|Tigers|Razorbacks|Cougars|Bulls|Rams|Broncos|Knights|Zips|Pride|Panthers|Rainbow Warriors|Lancers|Trojans|Quakers|Vandals|Blue Devils|Saints|Buckeyes|Horned Frogs|Red Storm|Cardinals|Bruins|Huskies|Paladins|Spartans|Bison|Wolverines|Jayhawks|Boilermakers|Royals|Sharks|Cavaliers|Raiders|Cyclones|Crimson Tide|Cornhuskers|Fighting Illini|Tar Heels|Red Raiders|Gaels|Aggies|Commodores|Cowboys|Hurricanes|Billikens|Volunteers|RedHawks|Mustangs|Hawkeyes|Longhorns|Owls)$/i,"").trim();for(const[k,v]of Object.entries(SEEDS)){if(n.toLowerCase().includes(k.toLowerCase())||k.toLowerCase().includes(n.toLowerCase()))return v}return""}
+
 let S=TEAMS.map(t=>({...t,st:"pre",us:null,th:null,clk:"",per:0,prob:t.pp,mr:0,det:"Upcoming"}));
 let sort="status",filt="all",polls=0;
 
@@ -289,8 +292,11 @@ async function fetchScores(){
 
       const{comp,our}=show;
       const op=comp.competitors.find(c=>c.id!==our.id);
-      // Update opponent name dynamically from ESPN
-      ft.opp=op?.team?.shortDisplayName||op?.team?.displayName||op?.team?.name||ft.opp;
+      // Update opponent name and seed dynamically from ESPN
+      const opName=op?.team?.shortDisplayName||op?.team?.displayName||op?.team?.name||ft.opp;
+      ft.opp=opName;
+      const looked=getSeed(opName);
+      if(looked) ft.os=looked;
       const u=parseInt(our.score)||0,t=parseInt(op?.score)||0;
       const sn=comp.status?.type?.name||"",clk=comp.status?.displayClock||"",per=comp.status?.period||0,det=comp.status?.type?.shortDetail||comp.status?.type?.detail||"";
       if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){ft.st="live";ft.us=u;ft.th=t;ft.clk=clk;ft.per=per;ft.prob=sn==="STATUS_HALFTIME"?wp(u,t,1,"0:00"):wp(u,t,per,clk);ft.det=det}
