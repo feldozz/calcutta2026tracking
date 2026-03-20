@@ -32,6 +32,9 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .conn{margin-top:6px;font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px}
 .conn-d{width:5px;height:5px;border-radius:50%}
 .rbtn{margin-left:auto;padding:3px 10px;font-size:9px;font-family:inherit;border:1px solid #334155;border-radius:3px;background:transparent;color:#94a3b8;cursor:pointer}
+.cpbtn{padding:4px 10px;font-size:9px;font-family:inherit;border:1px solid #334155;border-radius:4px;background:transparent;color:#94a3b8;cursor:pointer;white-space:nowrap;transition:all .2s}
+.cpbtn:active{background:var(--green);color:#000;border-color:var(--green)}
+.cpbtn.copied{background:var(--green);color:#000;border-color:var(--green)}
 
 /* ── Filters ── */
 .filters{display:flex;gap:5px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border);background:#0a0a12}
@@ -125,6 +128,7 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
     <div class="st"><div class="st-l">WINNINGS</div><div class="st-v" id="winnings" style="color:var(--muted)">$0</div><div class="st-s" id="winsCount">0 wins</div></div>
     <div class="st"><div class="st-l">NET P&L</div><div class="st-v" id="netPL">$0</div><div class="st-s" id="netPct"></div></div>
     <div class="st"><div class="st-l">ALIVE</div><div class="st-v" id="alive">19/19</div><div class="st-s">pot $6.08M</div></div>
+    <div class="st" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center"><button class="cpbtn" id="copyBtn" onclick="copyUpdate()">📋 Copy</button></div>
   </div>
   <div class="conn">
     <div class="conn-d" id="connDot" style="background:var(--amber)"></div>
@@ -184,6 +188,65 @@ function ncdf(x){const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.4531520
 function wp(u,t,p,c){if(!c)return 50;const[m,s]=(c||"0:00").split(":").map(Number),cs=(m||0)*60+(s||0),left=p<=1?cs+1200:cs,d=u-t,f=Math.max(left/2400,.001),sig=11*Math.sqrt(f);return Math.max(1,Math.min(99,Math.round(ncdf(d/sig)*100)))}
 function rag(p){if(p>=75)return{b:"#22c55e",t:"#4ade80",bg:"#0d3320",l:"STRONG"};if(p>=50)return{b:"#65a30d",t:"#a3e635",bg:"#1a2e1a",l:"LEAN"};if(p>=25)return{b:"#d97706",t:"#fbbf24",bg:"#3b2a0a",l:"TOSS-UP"};if(p>=10)return{b:"#ea580c",t:"#fb923c",bg:"#3b1c0a",l:"UNDERDOG"};return{b:"#dc2626",t:"#f87171",bg:"#3b0a0a",l:"LONG SHOT"}}
 function mt(n,a,t){const low=(n||"").toLowerCase();return t.m.some(x=>x.length<=4?(a||"").toUpperCase()===x.toUpperCase():low.includes(x.toLowerCase()))}
+
+function copyUpdate(){
+  const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
+  const al=S.filter(t=>t.st!=="final_loss"),wc=S.filter(t=>t.st==="final_win");
+  const lv=S.filter(t=>t.st==="live");
+  const wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
+  const net=wa-eff,pct=eff>0?((net/eff)*100).toFixed(1):"0.0";
+  const pre=S.filter(t=>t.st==="pre");
+  const today=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
+
+  let msg=`🏀 FREEMAN UPDATE — ${today}\n\n`;
+  msg+=`💰 Deployed: ${fm(eff)}\n`;
+  msg+=`🏆 Winnings: ${fm(wa)}\n`;
+  msg+=net>=0?`📈 Net P&L: ${fp(net)} (${pct}%)\n`:`📉 Net P&L: ${fp(net)} (${pct}%)\n`;
+  msg+=`👥 Alive: ${al.length}/${S.length}\n`;
+
+  if(lv.length>0){
+    msg+=`\n🔴 LIVE NOW:\n`;
+    lv.forEach(t=>{
+      msg+=`  ${t.team} ${t.us}-${t.th} vs ${t.opp} (${t.prob}%)\n`;
+    });
+  }
+
+  if(wc.length>0){
+    msg+=`\n✅ WINS:\n`;
+    wc.forEach(t=>{
+      const w=(PAY.find(p=>p.r===t.mr)?.c||0)*t.own;
+      msg+=`  ${t.team} ${t.us}-${t.th} → ${fm(w)}\n`;
+    });
+  }
+
+  const losses=S.filter(t=>t.st==="final_loss");
+  if(losses.length>0){
+    msg+=`\n❌ OUT:\n`;
+    losses.forEach(t=>{
+      msg+=`  ${t.team} ${t.us!==null?t.us+"-"+t.th:""}\n`;
+    });
+  }
+
+  if(pre.length>0){
+    msg+=`\n⏳ STILL TO PLAY: ${pre.map(t=>t.team).join(", ")}\n`;
+  }
+
+  msg+=`\n🎯 Pot: $6,077,500`;
+
+  navigator.clipboard.writeText(msg).then(()=>{
+    const btn=$("copyBtn");
+    btn.textContent="✓ Copied!";
+    btn.classList.add("copied");
+    setTimeout(()=>{btn.textContent="📋 Copy";btn.classList.remove("copied")},2000);
+  }).catch(()=>{
+    // Fallback for older browsers
+    const ta=document.createElement("textarea");
+    ta.value=msg;ta.style.position="fixed";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");const btn=$("copyBtn");btn.textContent="✓ Copied!";btn.classList.add("copied");setTimeout(()=>{btn.textContent="📋 Copy";btn.classList.remove("copied")},2000)}catch(e){}
+    document.body.removeChild(ta);
+  });
+}
 
 async function fetchScores(){
   try{
