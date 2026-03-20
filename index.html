@@ -172,7 +172,7 @@ const TEAMS=[
   {team:"Cal Baptist",seed:13,cost:15000,region:"East",opp:"Kansas",os:4,pp:7,sp:15.5,own:1,m:["california baptist","CBU"]},
   {team:"Troy",seed:13,cost:14000,region:"Midwest",opp:"Nebraska",os:4,pp:15,sp:13.5,own:1,m:["troy","TROY"]},
   {team:"Penn",seed:14,cost:8000,region:"Midwest",opp:"Illinois",os:3,pp:3,sp:24.5,own:1,m:["penn quakers","PENN"]},
-  {team:"PVA&M",seed:16,cost:8000,region:"South",opp:"Florida",os:1,pp:1,sp:35,own:1,m:["prairie view","PV"]},
+  {team:"PVA&M",seed:16,cost:8000,region:"South",opp:"Florida",os:1,pp:1,sp:35,own:1,m:["prairie view","PV"],playIn:true},
   {team:"Idaho",seed:15,cost:8000,region:"Midwest",opp:"Houston",os:2,pp:2,sp:23.5,own:1,m:["idaho","IDHO"]}
 ];
 const PAY=[{r:1,l:"R64",c:60775},{r:2,l:"R32",c:136744},{r:3,l:"S16",c:288681},{r:4,l:"E8",c:471006},{r:5,l:"F4",c:607750},{r:6,l:"W",c:1033175}];
@@ -278,7 +278,7 @@ async function fetchScores(){
         if(u>t) wins++;
         else eliminated=true;
       });
-      ft.mr=wins;
+      ft.mr=ft.playIn?Math.max(0,wins-1):wins;
 
       // Determine what to display: live > scheduled (if alive) > latest closed
       let show=null;
