@@ -191,7 +191,7 @@ function mt(n,a,t){const low=(n||"").toLowerCase();return t.m.some(x=>x.length<=
 
 function copyUpdate(){
   const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
-  const al=S.filter(t=>t.st!=="final_loss"),wc=S.filter(t=>t.st==="final_win");
+  const al=S.filter(t=>t.st!=="final_loss"),wc=S.filter(t=>t.mr>0);
   const lv=S.filter(t=>t.st==="live");
   const wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
   const net=wa-eff,pct=eff>0?((net/eff)*100).toFixed(1):"0.0";
@@ -215,7 +215,8 @@ function copyUpdate(){
     msg+=`\n✅ WINS:\n`;
     wc.forEach(t=>{
       const w=(PAY.find(p=>p.r===t.mr)?.c||0)*t.own;
-      msg+=`  ${t.team} ${t.us}-${t.th} → ${fm(w)}\n`;
+      const rd=PAY.find(p=>p.r===t.mr)?.l||"";
+      msg+=`  ${t.team} — ${rd} → ${fm(w)}\n`;
     });
   }
 
@@ -256,13 +257,37 @@ async function fetchScores(){
     for(const d of ds){try{const r=await fetch(`${API}?dates=${d}&groups=100&limit=100`);if(r.ok){const j=await r.json();if(j.events)games=games.concat(j.events)}}catch(e){}}
 
     S.forEach(ft=>{
+      ft.st="pre";ft.us=null;ft.th=null;ft.clk="";ft.per=0;ft.prob=ft.pp;ft.det="Upcoming";
       let matches=[];
       for(const ev of games){const c=ev.competitions?.[0];if(!c)continue;for(const tm of c.competitors){if(mt(tm.team?.displayName||tm.team?.name||"",tm.team?.abbreviation||"",ft)){matches.push({comp:c,our:tm,time:ev.date||c.date||""});break}}}
       if(!matches.length)return;
-      // Prefer live > scheduled > closed; within same status, latest start time
-      const prio=n=>({"STATUS_IN_PROGRESS":0,"STATUS_HALFTIME":0,"STATUS_SCHEDULED":1,"STATUS_FINAL":2,"STATUS_END_PERIOD":2}[n]??3);
-      matches.sort((a,b)=>{const pa=prio(a.comp.status?.type?.name||""),pb=prio(b.comp.status?.type?.name||"");if(pa!==pb)return pa-pb;return(b.time||"").localeCompare(a.time||"")});
-      const{comp,our}=matches[0];
+
+      // Separate by status
+      const live=[],closed=[],sched=[];
+      matches.forEach(g=>{
+        const sn=g.comp.status?.type?.name||"";
+        if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME") live.push(g);
+        else if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD") closed.push(g);
+        else sched.push(g);
+      });
+
+      // Process ALL completed games to tally wins and detect elimination
+      let eliminated=false, wins=0;
+      closed.forEach(g=>{
+        const u=parseInt(g.our.score)||0,t=parseInt(g.comp.competitors.find(c=>c.id!==g.our.id)?.score)||0;
+        if(u>t) wins++;
+        else eliminated=true;
+      });
+      ft.mr=wins;
+
+      // Determine what to display: live > scheduled (if alive) > latest closed
+      let show=null;
+      if(live.length>0) show=live[0];
+      else if(!eliminated && sched.length>0){ sched.sort((a,b)=>(a.time||"").localeCompare(b.time||"")); show=sched[0]; }
+      else if(closed.length>0){ closed.sort((a,b)=>(b.time||"").localeCompare(a.time||"")); show=closed[0]; }
+      if(!show) return;
+
+      const{comp,our}=show;
       const op=comp.competitors.find(c=>c.id!==our.id);
       const u=parseInt(our.score)||0,t=parseInt(op?.score)||0;
       const sn=comp.status?.type?.name||"",clk=comp.status?.displayClock||"",per=comp.status?.period||0,det=comp.status?.type?.shortDetail||comp.status?.type?.detail||"";
@@ -286,7 +311,7 @@ function render(){
   if(filt!=="all")arr=arr.filter(t=>t.region===filt);
 
   const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
-  const al=S.filter(t=>t.st!=="final_loss"),lv=S.filter(t=>t.st==="live"),wc=S.filter(t=>t.st==="final_win").length;
+  const al=S.filter(t=>t.st!=="final_loss"),lv=S.filter(t=>t.st==="live"),wc=S.filter(t=>t.mr>0).length;
   const wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
   const net=wa-eff,pct=eff>0?((net/eff)*100).toFixed(1):"0.0";
 
