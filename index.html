@@ -256,9 +256,13 @@ async function fetchScores(){
     for(const d of ds){try{const r=await fetch(`${API}?dates=${d}&groups=100&limit=100`);if(r.ok){const j=await r.json();if(j.events)games=games.concat(j.events)}}catch(e){}}
 
     S.forEach(ft=>{
-      let comp=null,our=null;
-      for(const ev of games){const c=ev.competitions?.[0];if(!c)continue;for(const tm of c.competitors){if(mt(tm.team?.displayName||tm.team?.name||"",tm.team?.abbreviation||"",ft)){comp=c;our=tm;break}}if(comp)break}
-      if(!comp)return;
+      let matches=[];
+      for(const ev of games){const c=ev.competitions?.[0];if(!c)continue;for(const tm of c.competitors){if(mt(tm.team?.displayName||tm.team?.name||"",tm.team?.abbreviation||"",ft)){matches.push({comp:c,our:tm,time:ev.date||c.date||""});break}}}
+      if(!matches.length)return;
+      // Prefer live > scheduled > closed; within same status, latest start time
+      const prio=n=>({"STATUS_IN_PROGRESS":0,"STATUS_HALFTIME":0,"STATUS_SCHEDULED":1,"STATUS_FINAL":2,"STATUS_END_PERIOD":2}[n]??3);
+      matches.sort((a,b)=>{const pa=prio(a.comp.status?.type?.name||""),pb=prio(b.comp.status?.type?.name||"");if(pa!==pb)return pa-pb;return(b.time||"").localeCompare(a.time||"")});
+      const{comp,our}=matches[0];
       const op=comp.competitors.find(c=>c.id!==our.id);
       const u=parseInt(our.score)||0,t=parseInt(op?.score)||0;
       const sn=comp.status?.type?.name||"",clk=comp.status?.displayClock||"",per=comp.status?.period||0,det=comp.status?.type?.shortDetail||comp.status?.type?.detail||"";
