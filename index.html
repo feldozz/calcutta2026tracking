@@ -90,6 +90,30 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .cb-l{font-size:7px;color:#4b5563;letter-spacing:1px}
 .cb-v{font-size:12px;font-weight:700;margin-top:1px}
 
+/* Hedge calculator */
+.hedge-btn{margin-top:8px;width:100%;padding:8px;font-size:10px;font-weight:700;font-family:inherit;letter-spacing:1px;border:1px dashed var(--amber);border-radius:6px;background:rgba(245,158,11,.08);color:var(--amber);cursor:pointer;text-transform:uppercase}
+.hedge-btn:hover{background:rgba(245,158,11,.15)}
+.hedge-panel{margin-top:8px;padding:12px;background:rgba(0,0,0,.4);border:1px solid var(--amber);border-radius:8px;display:none}
+.hedge-panel.open{display:block}
+.hedge-title{font-family:Outfit,sans-serif;font-size:13px;font-weight:700;color:var(--al);margin-bottom:8px}
+.hedge-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.hedge-label{font-size:9px;color:var(--muted);letter-spacing:1px;min-width:90px}
+.hedge-input{background:#111;border:1px solid #333;border-radius:4px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--text);width:100px;text-align:center}
+.hedge-input:focus{outline:none;border-color:var(--amber)}
+.hedge-input::placeholder{color:#555}
+.hedge-hint{font-size:8px;color:#555;margin-top:-4px;margin-bottom:8px}
+.hedge-results{border-top:1px solid #333;padding-top:8px;margin-top:4px}
+.hedge-stat{display:flex;justify-content:space-between;padding:4px 0;font-size:11px}
+.hedge-stat-l{color:var(--muted)}
+.hedge-stat-v{font-weight:700}
+.hedge-scenario{margin-top:8px;padding:8px;border-radius:6px;font-size:10px}
+.hedge-scenario.win{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.hedge-scenario.lose{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.hedge-scenario-title{font-weight:700;margin-bottom:4px;font-size:11px}
+.hedge-guarantee{margin-top:10px;padding:10px;background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:6px;text-align:center}
+.hedge-guarantee-l{font-size:8px;color:var(--amber);letter-spacing:2px}
+.hedge-guarantee-v{font-size:20px;font-weight:800;margin-top:2px}
+
 .legend{padding:8px 12px 16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .lg-i{display:flex;align-items:center;gap:4px}
 .lg-d{width:8px;height:8px;border-radius:2px}
@@ -107,6 +131,8 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   .card-bottom{grid-column:4/7;display:contents}
   .cb-item{background:none;padding:0}
   .card-meta{grid-column:1}
+  .hedge-btn{grid-column:1/-1}
+  .hedge-panel{grid-column:1/-1}
   .prob-n{font-size:24px}
   .sc-n{font-size:28px}
 }
@@ -190,6 +216,93 @@ function ncdf(x){const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.4531520
 function wp(u,t,p,c){if(!c)return 50;const[m,s]=(c||"0:00").split(":").map(Number),cs=(m||0)*60+(s||0),left=p<=1?cs+1200:cs,d=u-t,f=Math.max(left/2400,.001),sig=11*Math.sqrt(f);return Math.max(1,Math.min(99,Math.round(ncdf(d/sig)*100)))}
 function rag(p){if(p>=75)return{b:"#22c55e",t:"#4ade80",bg:"#0d3320",l:"STRONG"};if(p>=50)return{b:"#65a30d",t:"#a3e635",bg:"#1a2e1a",l:"LEAN"};if(p>=25)return{b:"#d97706",t:"#fbbf24",bg:"#3b2a0a",l:"TOSS-UP"};if(p>=10)return{b:"#ea580c",t:"#fb923c",bg:"#3b1c0a",l:"UNDERDOG"};return{b:"#dc2626",t:"#f87171",bg:"#3b0a0a",l:"LONG SHOT"}}
 function mt(n,a,t){const low=(n||"").toLowerCase();return t.m.some(x=>x.length<=4?(a||"").toUpperCase()===x.toUpperCase():low.includes(x.toLowerCase()))}
+
+function toggleHedge(team){
+  const id="hedge-"+team.replace(/[^a-zA-Z]/g,"");
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle("open");
+}
+
+function americanToDecimal(odds){
+  const n=parseFloat(odds);
+  if(isNaN(n))return null;
+  if(n>0) return 1+(n/100);
+  if(n<0) return 1+(100/Math.abs(n));
+  return null;
+}
+
+function calcHedge(team){
+  const key=team.replace(/[^a-zA-Z]/g,"");
+  const input=document.getElementById("hml-"+key);
+  const result=document.getElementById("hresult-"+key);
+  const t=S.find(x=>x.team===team);
+  if(!t||!input||!result)return;
+
+  const odds=input.value.trim();
+  const dec=americanToDecimal(odds);
+  if(!dec){result.innerHTML="";return}
+
+  // Calcutta equity calculation
+  // Current banked winnings (from prior rounds)
+  const banked=t.mr>0?(PAY.find(p=>p.r===t.mr)?.c||0)*t.own:0;
+  // Next round payout if they win this game
+  const nextRound=t.mr+1;
+  const nextPay=(PAY.find(p=>p.r===nextRound)?.c||0)*t.own;
+  // Incremental value of winning this game
+  const incremental=nextPay-banked;
+  // Total future value (rough estimate using win prob for remaining rounds)
+  // For simplicity, just hedge the immediate next game's incremental value
+  const V=incremental;
+
+  // Hedge math:
+  // If team WINS: profit = V - hedgeBet
+  // If team LOSES: profit = hedgeBet * (decimalOdds - 1) 
+  // Set equal: V - H = H * (D - 1)  →  H = V / D
+  const H=V/dec;
+  const guaranteedProfit=V-H;
+
+  // Scenario profits
+  const profitIfWin=V-H;
+  const profitIfLose=H*(dec-1);
+
+  // Total P&L including banked and cost
+  const ec=t.cost*t.own;
+  const totalIfWin=banked+profitIfWin-ec;
+  const totalIfLose=banked+profitIfLose-ec;
+
+  const gColor=guaranteedProfit>=0?"var(--green)":"var(--rl)";
+
+  result.innerHTML=`
+    <div class="hedge-results">
+      <div class="hedge-stat"><span class="hedge-stat-l">Banked winnings</span><span class="hedge-stat-v">${fm(banked)}</span></div>
+      <div class="hedge-stat"><span class="hedge-stat-l">Next round payout</span><span class="hedge-stat-v">${fm(nextPay)}</span></div>
+      <div class="hedge-stat"><span class="hedge-stat-l">Incremental value at stake</span><span class="hedge-stat-v" style="color:var(--al)">${fm(V)}</span></div>
+      <div class="hedge-stat"><span class="hedge-stat-l">Opponent decimal odds</span><span class="hedge-stat-v">${dec.toFixed(3)}</span></div>
+      <div class="hedge-stat" style="border-top:1px solid #333;padding-top:6px;margin-top:4px"><span class="hedge-stat-l">🎯 OPTIMAL HEDGE BET</span><span class="hedge-stat-v" style="color:var(--al);font-size:16px">${fm(H)}</span></div>
+
+      <div class="hedge-scenario win" style="margin-top:10px">
+        <div class="hedge-scenario-title" style="color:var(--gl)">✅ IF ${t.team.toUpperCase()} WINS</div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Calcutta gain</span><span class="hedge-stat-v" style="color:var(--gl)">+${fm(V)}</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Hedge bet lost</span><span class="hedge-stat-v" style="color:var(--rl)">-${fm(H)}</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Net from this game</span><span class="hedge-stat-v" style="color:var(--gl)">${fp(profitIfWin)}</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Overall P&L</span><span class="hedge-stat-v" style="color:${totalIfWin>=0?"var(--gl)":"var(--rl)"}">${fp(totalIfWin)}</span></div>
+      </div>
+
+      <div class="hedge-scenario lose" style="margin-top:6px">
+        <div class="hedge-scenario-title" style="color:var(--rl)">❌ IF ${t.team.toUpperCase()} LOSES</div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Calcutta gain</span><span class="hedge-stat-v">$0</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Hedge bet won</span><span class="hedge-stat-v" style="color:var(--gl)">+${fm(H*(dec-1))}</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Net from this game</span><span class="hedge-stat-v" style="color:var(--gl)">${fp(profitIfLose)}</span></div>
+        <div class="hedge-stat"><span class="hedge-stat-l">Overall P&L</span><span class="hedge-stat-v" style="color:${totalIfLose>=0?"var(--gl)":"var(--rl)"}">${fp(totalIfLose)}</span></div>
+      </div>
+
+      <div class="hedge-guarantee">
+        <div class="hedge-guarantee-l">GUARANTEED PROFIT FROM THIS GAME</div>
+        <div class="hedge-guarantee-v" style="color:${gColor}">${fp(guaranteedProfit)}</div>
+      </div>
+    </div>
+  `;
+}
 
 function copyUpdate(){
   const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
@@ -362,6 +475,16 @@ function render(){
         <div class="cb-item"><div class="cb-l">WON</div><div class="cb-v" style="color:${tw>0?"var(--green)":"#4b5563"}">${tw>0?fm(tw):"—"}</div></div>
         <div class="cb-item"><div class="cb-l">${t.mr>0?"P&L":"R64 ROI"}</div>${t.mr>0?`<div class="cb-v" style="color:${tpl>=0?"var(--gl)":"var(--rl)"}">${fp(tpl)}</div>`:`<div class="cb-v" style="color:${parseInt(roi)>0?"var(--gl)":"var(--rl)"}">${parseInt(roi)>0?"+":""}${roi}%</div>`}</div>
       </div>
+      ${live?`<button class="hedge-btn" onclick="toggleHedge('${t.team}')">⚖️ HALFTIME HEDGE CALCULATOR</button>
+      <div class="hedge-panel" id="hedge-${t.team.replace(/[^a-zA-Z]/g,"")}">
+        <div class="hedge-title">⚖️ Hedge Calculator — ${t.team}</div>
+        <div class="hedge-row">
+          <span class="hedge-label">OPP MONEYLINE</span>
+          <input class="hedge-input" id="hml-${t.team.replace(/[^a-zA-Z]/g,"")}" type="text" placeholder="+150" oninput="calcHedge('${t.team}')">
+        </div>
+        <div class="hedge-hint">Enter American odds for ${t.opp} to win (e.g. +150 or -110)</div>
+        <div id="hresult-${t.team.replace(/[^a-zA-Z]/g,"")}"></div>
+      </div>`:""}
     </div>`;
   }).join("");
 }
