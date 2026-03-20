@@ -183,8 +183,8 @@ let S=TEAMS.map(t=>({...t,st:"pre",us:null,th:null,clk:"",per:0,prob:t.pp,mr:0,d
 let sort="status",filt="all",polls=0;
 
 const $=id=>document.getElementById(id);
-const fm=n=>(n<0?"-":"")+"$"+Math.abs(n).toLocaleString();
-const fp=n=>(n>0?"+":n<0?"-":"")+"$"+Math.abs(n).toLocaleString();
+const fm=n=>(n<0?"-":"")+"$"+Math.abs(Math.round(n)).toLocaleString();
+const fp=n=>(n>0?"+":n<0?"-":"")+"$"+Math.abs(Math.round(n)).toLocaleString();
 
 function ncdf(x){const a1=.254829592,a2=-.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=.3275911,s=x<0?-1:1,ax=Math.abs(x)/1.4142135,t=1/(1+p*ax),y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-ax*ax);return .5*(1+s*y)}
 function wp(u,t,p,c){if(!c)return 50;const[m,s]=(c||"0:00").split(":").map(Number),cs=(m||0)*60+(s||0),left=p<=1?cs+1200:cs,d=u-t,f=Math.max(left/2400,.001),sig=11*Math.sqrt(f);return Math.max(1,Math.min(99,Math.round(ncdf(d/sig)*100)))}
