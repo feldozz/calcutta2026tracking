@@ -120,6 +120,32 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .lg-t{font-size:8px;color:var(--muted);letter-spacing:.5px}
 .footer{padding:10px 12px;border-top:1px solid var(--border);text-align:center;font-size:8px;color:var(--dim);letter-spacing:.5px}
 
+/* Tabs */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);background:#0a0a12}
+.tab{flex:1;padding:10px 12px;font-size:11px;font-weight:700;font-family:inherit;letter-spacing:1px;border:none;background:transparent;color:var(--muted);cursor:pointer;text-align:center;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.active{color:var(--gl);border-bottom-color:var(--green);background:rgba(34,197,94,.05)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Standings */
+.standings{padding:12px}
+.standings-title{font-family:Outfit,sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:12px;text-align:center;letter-spacing:-0.5px}
+.stand-card{padding:12px;margin-bottom:6px;border-radius:8px;background:var(--card);border:1px solid var(--border)}
+.stand-rank{font-family:Outfit,sans-serif;font-size:22px;font-weight:900;color:var(--muted);margin-right:10px;min-width:28px;text-align:center}
+.stand-top{display:flex;align-items:center;gap:8px}
+.stand-name{font-family:Outfit,sans-serif;font-size:16px;font-weight:800;flex:1}
+.stand-pl{text-align:right}
+.stand-pl-v{font-size:18px;font-weight:800}
+.stand-pl-pct{font-size:9px;margin-top:1px}
+.stand-stats{display:flex;gap:4px;margin-top:8px}
+.stand-stat{flex:1;text-align:center;padding:5px;background:rgba(0,0,0,.3);border-radius:4px}
+.stand-stat-l{font-size:7px;color:var(--muted);letter-spacing:1px}
+.stand-stat-v{font-size:12px;font-weight:700;margin-top:1px}
+.stand-teams{margin-top:8px;font-size:9px;color:var(--muted);line-height:1.6}
+.stand-team-alive{color:#94a3b8}
+.stand-team-dead{color:#4b5563;text-decoration:line-through}
+.stand-team-won{color:var(--gl)}
+
 /* Desktop: widen cards */
 @media(min-width:768px){
   .cards{padding:4px 24px 32px}
@@ -163,6 +189,12 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   </div>
 </div>
 
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('freeman')">🏀 FREEMAN</button>
+  <button class="tab" onclick="switchTab('standings')">🏆 STANDINGS</button>
+</div>
+
+<div class="tab-content active" id="tab-freeman">
 <div class="filters" id="filters"></div>
 <div class="payouts" id="payouts"></div>
 <div class="cards" id="cards"></div>
@@ -173,6 +205,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
   <div class="lg-i"><div class="lg-d" style="background:#d97706"></div><span class="lg-t">25-49%</span></div>
   <div class="lg-i"><div class="lg-d" style="background:#ea580c"></div><span class="lg-t">10-24%</span></div>
   <div class="lg-i"><div class="lg-d" style="background:#dc2626"></div><span class="lg-t">&lt;10%</span></div>
+</div>
+</div>
+
+<div class="tab-content" id="tab-standings">
+<div class="standings" id="standings"></div>
 </div>
 <div class="footer">FREEMAN SYNDICATE — ESPN LIVE — 30s REFRESH — WIN PROB: SCORE DIFF × TIME</div>
 
@@ -416,10 +453,12 @@ async function fetchScores(){
       else{ft.det=det||"Upcoming"}
     });
     polls++;
+    updateAllResults(games);
     $("connDot").style.background="var(--gl)";
     $("connText").textContent="ESPN live — "+new Date().toLocaleTimeString()+" — polls: "+polls;
   }catch(e){$("connDot").style.background="var(--rl)";$("connText").textContent="Error: "+e.message}
   render();
+  if($("tab-standings").classList.contains("active")) renderStandings();
 }
 
 function render(){
@@ -490,6 +529,186 @@ function render(){
 }
 
 // Init
+// ── ALL OWNERS (using ESPN abbreviations for matching) ──
+const OWNERS={
+  "Freeman":[
+    {abbr:"ARIZ",name:"Arizona",cost:530000,own:1},
+    {abbr:"DUKE",name:"Duke",cost:400000,own:0.5},
+    {abbr:"UVA",name:"Virginia",cost:160000,own:1},
+    {abbr:"KU",name:"Kansas",cost:130000,own:1},
+    {abbr:"BYU",name:"BYU",cost:74000,own:1},
+    {abbr:"USF",name:"S. Florida",cost:53500,own:1},
+    {abbr:"VCU",name:"VCU",cost:52000,own:1},
+    {abbr:"SCU",name:"Santa Clara",cost:37000,own:1},
+    {abbr:"UCF",name:"UCF",cost:35000,own:1},
+    {abbr:"CLEM",name:"Clemson",cost:35000,own:1},
+    {abbr:"AKR",name:"Akron",cost:34000,own:1},
+    {abbr:"HOF",name:"Hofstra",cost:25000,own:1},
+    {abbr:"HP",name:"High Point",cost:23000,own:1},
+    {abbr:"HAW",name:"Hawai'i",cost:18000,own:1},
+    {abbr:"CBU",name:"Cal Baptist",cost:15000,own:1},
+    {abbr:"TROY",name:"Troy",cost:14000,own:1},
+    {abbr:"PENN",name:"Penn",cost:8000,own:1},
+    {abbr:"PV",name:"PVA&M",cost:8000,own:1,playIn:true},
+    {abbr:"IDHO",name:"Idaho",cost:8000,own:1}
+  ],
+  "Buckets":[
+    {abbr:"SIE",name:"Siena",cost:6000,own:1},
+    {abbr:"TCU",name:"TCU",cost:40000,own:1},
+    {abbr:"SJU",name:"St. John's",cost:170000,own:1},
+    {abbr:"MSU",name:"Michigan State",cost:260000,own:1},
+    {abbr:"NDSU",name:"N. Dakota State",cost:6000,own:1},
+    {abbr:"FUR",name:"Furman",cost:6000,own:1},
+    {abbr:"TXAM",name:"Texas A&M",cost:44000,own:1},
+    {abbr:"LIU",name:"LIU",cost:8667,own:1},
+    {abbr:"ARK",name:"Arkansas",cost:180000,own:1},
+    {abbr:"KENN",name:"Kennesaw State",cost:8667,own:1},
+    {abbr:"MIA",name:"Miami",cost:48000,own:1},
+    {abbr:"QUC",name:"Queens",cost:8667,own:1},
+    {abbr:"UGA",name:"Georgia",cost:48000,own:1},
+    {abbr:"TTU",name:"Texas Tech",cost:100000,own:1}
+  ],
+  "Ward":[
+    {abbr:"OSU",name:"Ohio State",cost:45000,own:1},
+    {abbr:"MCNS",name:"McNeese",cost:18000,own:1},
+    {abbr:"MIZZ",name:"Missouri",cost:35000,own:1},
+    {abbr:"HOW",name:"Howard",cost:7333,own:1},
+    {abbr:"SLU",name:"Saint Louis",cost:35000,own:1},
+    {abbr:"WRST",name:"Wright State",cost:7333,own:1},
+    {abbr:"TNST",name:"Tennessee State",cost:7333,own:1}
+  ],
+  "Adultos":[
+    {abbr:"UNI",name:"N. Iowa",cost:26000,own:1},
+    {abbr:"LOU",name:"Louisville",cost:80000,own:1},
+    {abbr:"FLA",name:"Florida",cost:350000,own:1},
+    {abbr:"UNC",name:"North Carolina",cost:45000,own:1},
+    {abbr:"GONZ",name:"Gonzaga",cost:175000,own:1},
+    {abbr:"M-OH",name:"Miami (Ohio)",cost:35000,own:1},
+    {abbr:"ISU",name:"Iowa State",cost:300000,own:1}
+  ],
+  "Hooter":[
+    {abbr:"UCLA",name:"UCLA",cost:80000,own:1},
+    {abbr:"CONN",name:"UConn",cost:300000,own:1},
+    {abbr:"NEB",name:"Nebraska",cost:100000,own:1},
+    {abbr:"SMC",name:"Saint Mary's",cost:60000,own:1},
+    {abbr:"HOU",name:"Houston",cost:350000,own:1},
+    {abbr:"VILL",name:"Villanova",cost:33000,own:1},
+    {abbr:"WIS",name:"Wisconsin",cost:75000,own:1},
+    {abbr:"PUR",name:"Purdue",cost:240000,own:1},
+    {abbr:"TENN",name:"Tennessee",cost:100000,own:1}
+  ],
+  "Kerlin":[
+    {abbr:"IOWA",name:"Iowa",cost:42000,own:1},
+    {abbr:"VAN",name:"Vanderbilt",cost:125000,own:1},
+    {abbr:"ILL",name:"Illinois",cost:200000,own:1},
+    {abbr:"USU",name:"Utah State",cost:32000,own:1},
+    {abbr:"TEX",name:"Texas",cost:36000,own:1},
+    {abbr:"MICH",name:"Michigan",cost:375000,own:1},
+    {abbr:"ALA",name:"Alabama",cost:120000,own:1},
+    {abbr:"UK",name:"Kentucky",cost:50000,own:1},
+    {abbr:"DUKE",name:"Duke",cost:400000,own:0.5}
+  ]
+};
+
+// Track all teams' results globally (abbr → {wins, eliminated, status})
+let allResults={};
+
+function updateAllResults(games){
+  // Reset
+  allResults={};
+  // For each team abbreviation across all owners, find their games
+  const allAbbrs=new Set();
+  Object.values(OWNERS).forEach(teams=>teams.forEach(t=>allAbbrs.add(t.abbr)));
+
+  allAbbrs.forEach(abbr=>{
+    let wins=0,eliminated=false,alive=true,st="pre";
+    const isPlayIn=Object.values(OWNERS).flat().find(t=>t.abbr===abbr&&t.playIn);
+
+    for(const ev of games){
+      const c=ev.competitions?.[0];if(!c)continue;
+      const tm=c.competitors.find(x=>(x.team?.abbreviation||"")==abbr);
+      if(!tm)continue;
+      const sn=c.status?.type?.name||"";
+      if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD"){
+        const opp=c.competitors.find(x=>x.id!==tm.id);
+        const u=parseInt(tm.score)||0,t=parseInt(opp?.score)||0;
+        if(u>t) wins++;
+        else{eliminated=true;alive=false;st="final_loss"}
+      }else if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){
+        st="live";
+      }
+    }
+    if(!eliminated&&wins>0) st="advancing";
+    const mr=isPlayIn?Math.max(0,wins-1):wins;
+    allResults[abbr]={wins,mr,eliminated,alive:!eliminated,st};
+  });
+}
+
+function renderStandings(){
+  const el=$("standings");
+  const ownerData=Object.entries(OWNERS).map(([name,teams])=>{
+    const invested=teams.reduce((s,t)=>s+t.cost*t.own,0);
+    const winnings=teams.reduce((s,t)=>{
+      const r=allResults[t.abbr];
+      if(r&&r.mr>0){const p=PAY.find(x=>x.r===r.mr);if(p)return s+p.c*t.own}
+      return s;
+    },0);
+    const aliveCount=teams.filter(t=>{const r=allResults[t.abbr];return !r||r.alive}).length;
+    const pl=winnings-invested;
+    const roi=invested>0?((pl/invested)*100).toFixed(1):"0.0";
+    return{name,teams,invested,winnings,aliveCount,total:teams.length,pl,roi};
+  });
+
+  // Sort by P&L descending
+  ownerData.sort((a,b)=>b.pl-a.pl);
+
+  const colors={"Freeman":"var(--green)","Buckets":"#60a5fa","Ward":"#c084fc","Adultos":"#f472b6","Hooter":"#fb923c","Kerlin":"#38bdf8"};
+
+  el.innerHTML=`<div class="standings-title">🏆 LEAGUE STANDINGS</div>`+
+    ownerData.map((o,i)=>{
+      const c=colors[o.name]||"var(--text)";
+      const plCol=o.pl>=0?"var(--gl)":"var(--rl)";
+      const teamList=o.teams.map(t=>{
+        const r=allResults[t.abbr];
+        const cls=r?.eliminated?"stand-team-dead":r?.mr>0?"stand-team-won":"stand-team-alive";
+        const roundLabel=r?.mr>0?` ✓${PAY.find(p=>p.r===r.mr)?.l||""}`:"";
+        const ownTag=t.own<1?` (${t.own*100}%)`:"";
+        return`<span class="${cls}">${t.name}${ownTag}${roundLabel}</span>`;
+      }).join(" · ");
+
+      return`<div class="stand-card" style="border-left:4px solid ${c}">
+        <div class="stand-top">
+          <div class="stand-rank" style="color:${c}">${i+1}</div>
+          <div class="stand-name" style="color:${c}">${o.name}</div>
+          <div class="stand-pl">
+            <div class="stand-pl-v" style="color:${plCol}">${fp(o.pl)}</div>
+            <div class="stand-pl-pct" style="color:${plCol}">${o.pl>=0?"+":""}${o.roi}%</div>
+          </div>
+        </div>
+        <div class="stand-stats">
+          <div class="stand-stat"><div class="stand-stat-l">INVESTED</div><div class="stand-stat-v">${fm(o.invested)}</div></div>
+          <div class="stand-stat"><div class="stand-stat-l">WINNINGS</div><div class="stand-stat-v" style="color:${o.winnings>0?"var(--green)":"#4b5563"}">${o.winnings>0?fm(o.winnings):"—"}</div></div>
+          <div class="stand-stat"><div class="stand-stat-l">NET P&L</div><div class="stand-stat-v" style="color:${plCol}">${fp(o.pl)}</div></div>
+          <div class="stand-stat"><div class="stand-stat-l">ALIVE</div><div class="stand-stat-v">${o.aliveCount}/${o.total}</div></div>
+        </div>
+        <div class="stand-teams">${teamList}</div>
+      </div>`;
+    }).join("");
+}
+
+function switchTab(tab){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.remove("active"));
+  if(tab==="freeman"){
+    document.querySelectorAll(".tab")[0].classList.add("active");
+    $("tab-freeman").classList.add("active");
+  }else{
+    document.querySelectorAll(".tab")[1].classList.add("active");
+    $("tab-standings").classList.add("active");
+    renderStandings();
+  }
+}
+
 (function(){
   const f=$("filters"),regs=["all","East","West","South","Midwest"],sorts=[["status","LIVE ↑"],["cost","COST"],["prob","WIN %"],["seed","SEED"]];
   function drawFilters(){
