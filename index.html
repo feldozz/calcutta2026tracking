@@ -4,56 +4,57 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>FREEMAN — Live Tracker</title>
-<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgo=">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#06060b">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#06060b;--card:#0c0c14;--border:#1a1a28;--text:#e2e8f0;--muted:#64748b;--dim:#374151;--green:#22c55e;--gl:#4ade80;--red:#dc2626;--rl:#f87171;--amber:#f59e0b;--al:#fbbf24}
+:root{--bg:#06060b;--card:#0c0c14;--bdr:#1a1a28;--text:#e2e8f0;--muted:#64748b;--dim:#374151;--green:#22c55e;--gl:#4ade80;--red:#dc2626;--rl:#f87171;--amber:#f59e0b;--al:#fbbf24}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;-webkit-font-smoothing:antialiased}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-/* ── Header ── */
+/* ═══ HEADER ═══ */
 .hdr{background:linear-gradient(135deg,#0e1225,#160a24,#0a1420);border-bottom:2px solid var(--green);padding:12px 16px;position:sticky;top:0;z-index:100}
 .hdr-top{display:flex;align-items:center;gap:10px}
 .mascot{width:42px;height:42px;border-radius:50%;border:2px solid var(--green);object-fit:cover;object-position:center top}
 .brand{font-family:Outfit,sans-serif;font-size:24px;font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,var(--green),var(--gl));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .sub{font-size:9px;color:var(--muted);letter-spacing:2px}
-
-/* ── Stats strip ── */
 .stats{display:flex;gap:2px;margin-top:10px;background:#0a0a12;border-radius:6px;overflow:hidden}
 .st{flex:1;text-align:center;padding:6px 4px}
 .st-l{font-size:7px;color:var(--muted);letter-spacing:1.5px;white-space:nowrap}
 .st-v{font-size:14px;font-weight:700;margin-top:1px}
 .st-s{font-size:8px;color:#94a3b8}
-
 .conn{margin-top:6px;font-size:9px;color:var(--muted);display:flex;align-items:center;gap:5px}
 .conn-d{width:5px;height:5px;border-radius:50%}
 .rbtn{margin-left:auto;padding:3px 10px;font-size:9px;font-family:inherit;border:1px solid #334155;border-radius:3px;background:transparent;color:#94a3b8;cursor:pointer}
 .cpbtn{padding:4px 10px;font-size:9px;font-family:inherit;border:1px solid #334155;border-radius:4px;background:transparent;color:#94a3b8;cursor:pointer;white-space:nowrap;transition:all .2s}
-.cpbtn:active{background:var(--green);color:#000;border-color:var(--green)}
-.cpbtn.copied{background:var(--green);color:#000;border-color:var(--green)}
+.cpbtn:active,.cpbtn.copied{background:var(--green);color:#000;border-color:var(--green)}
 
-/* ── Filters ── */
-.filters{display:flex;gap:5px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border);background:#0a0a12}
-.fbtn{padding:5px 10px;font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.5px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0}
+/* ═══ TABS ═══ */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--bdr);background:#0a0a12}
+.tab{flex:1;padding:10px 12px;font-size:11px;font-weight:700;font-family:inherit;letter-spacing:1px;border:none;background:transparent;color:var(--muted);cursor:pointer;text-align:center;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab.active{color:var(--gl);border-bottom-color:var(--green);background:rgba(34,197,94,.05)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ═══ FILTERS ═══ */
+.filters{display:flex;gap:5px;padding:8px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--bdr);background:#0a0a12}
+.fbtn{padding:5px 10px;font-size:10px;font-weight:600;font-family:inherit;letter-spacing:.5px;border:1px solid var(--bdr);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0}
 .fbtn.ar{border-color:var(--green);background:#0d3320;color:var(--gl)}
 .fbtn.as{border-color:#818cf8;background:#1e1b4b;color:#a5b4fc}
 
-/* ── Payouts ── */
-.payouts{display:flex;margin:8px 12px;background:#0d1117;border:1px solid var(--border);border-radius:6px;overflow:hidden}
-.po{flex:1;padding:6px 2px;text-align:center;border-right:1px solid var(--border)}
+/* ═══ PAYOUTS ═══ */
+.payouts{display:flex;margin:8px 12px;background:#0d1117;border:1px solid var(--bdr);border-radius:6px;overflow:hidden}
+.po{flex:1;padding:6px 2px;text-align:center;border-right:1px solid var(--bdr)}
 .po:last-child{border-right:none}
 .po-l{font-size:7px;color:var(--muted);letter-spacing:1px}
 .po-v{font-size:10px;font-weight:700;margin-top:1px}
 
-/* ── Team cards (mobile-first) ── */
+/* ═══ TEAM CARDS ═══ */
 .cards{padding:4px 12px 24px}
 .card{border-radius:8px;padding:12px;margin-bottom:6px;position:relative;overflow:hidden}
 .card.dead{opacity:.4}
-
 .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .card-team{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .tname{font-family:Outfit,sans-serif;font-size:15px;font-weight:700;color:#f1f5f9}
@@ -63,15 +64,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .stb-live{background:var(--red);color:#fff;animation:pulse 1.2s infinite}
 .stb-win{background:var(--green);color:#000}
 .stb-out{background:#4b5563;color:#9ca3af}
-
+.card-meta{font-size:9px;color:#4b5563;margin-top:4px}
+.own-tag{color:var(--amber);margin-left:4px}
 .card-prob{text-align:right}
 .prob-n{font-size:28px;font-weight:800;line-height:1}
 .prob-t{font-size:7px;font-weight:700;letter-spacing:1.5px;margin-top:2px}
-
-.card-meta{font-size:9px;color:#4b5563;margin-top:4px}
-.own-tag{color:var(--amber);margin-left:4px}
-
-/* Score row */
 .score-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px;background:rgba(0,0,0,.3);border-radius:6px}
 .sc-side{text-align:center;min-width:36px}
 .sc-lbl{font-size:7px;letter-spacing:1px}
@@ -80,17 +77,14 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .sc-info{flex:1}
 .sc-opp{font-size:12px;font-weight:600;color:#cbd5e1}
 .sc-clk{font-size:9px;color:#94a3b8;margin-top:1px}
-
 .matchup{margin-top:6px;font-size:11px;color:#cbd5e1}
 .spread{font-size:10px;color:#4b5563;margin-top:1px}
-
-/* Bottom stats row */
 .card-bottom{display:flex;gap:4px;margin-top:8px}
 .cb-item{flex:1;text-align:center;padding:4px;background:rgba(0,0,0,.2);border-radius:4px}
 .cb-l{font-size:7px;color:#4b5563;letter-spacing:1px}
 .cb-v{font-size:12px;font-weight:700;margin-top:1px}
 
-/* Hedge calculator */
+/* ═══ HEDGE CALCULATOR ═══ */
 .hedge-btn{margin-top:8px;width:100%;padding:8px;font-size:10px;font-weight:700;font-family:inherit;letter-spacing:1px;border:1px dashed var(--amber);border-radius:6px;background:rgba(245,158,11,.08);color:var(--amber);cursor:pointer;text-transform:uppercase}
 .hedge-btn:hover{background:rgba(245,158,11,.15)}
 .hedge-panel{margin-top:8px;padding:12px;background:rgba(0,0,0,.4);border:1px solid var(--amber);border-radius:8px;display:none}
@@ -114,24 +108,11 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .hedge-guarantee-l{font-size:8px;color:var(--amber);letter-spacing:2px}
 .hedge-guarantee-v{font-size:20px;font-weight:800;margin-top:2px}
 
-.legend{padding:8px 12px 16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.lg-i{display:flex;align-items:center;gap:4px}
-.lg-d{width:8px;height:8px;border-radius:2px}
-.lg-t{font-size:8px;color:var(--muted);letter-spacing:.5px}
-.footer{padding:10px 12px;border-top:1px solid var(--border);text-align:center;font-size:8px;color:var(--dim);letter-spacing:.5px}
-
-/* Tabs */
-.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);background:#0a0a12}
-.tab{flex:1;padding:10px 12px;font-size:11px;font-weight:700;font-family:inherit;letter-spacing:1px;border:none;background:transparent;color:var(--muted);cursor:pointer;text-align:center;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-2px}
-.tab.active{color:var(--gl);border-bottom-color:var(--green);background:rgba(34,197,94,.05)}
-.tab-content{display:none}
-.tab-content.active{display:block}
-
-/* Standings */
+/* ═══ STANDINGS ═══ */
 .standings{padding:12px}
 .standings-title{font-family:Outfit,sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:12px;text-align:center;letter-spacing:-0.5px}
-.stand-card{padding:12px;margin-bottom:6px;border-radius:8px;background:var(--card);border:1px solid var(--border)}
-.stand-rank{font-family:Outfit,sans-serif;font-size:22px;font-weight:900;color:var(--muted);margin-right:10px;min-width:28px;text-align:center}
+.stand-card{padding:12px;margin-bottom:6px;border-radius:8px;background:var(--card);border:1px solid var(--bdr)}
+.stand-rank{font-family:Outfit,sans-serif;font-size:22px;font-weight:900;margin-right:10px;min-width:28px;text-align:center}
 .stand-top{display:flex;align-items:center;gap:8px}
 .stand-name{font-family:Outfit,sans-serif;font-size:16px;font-weight:800;flex:1}
 .stand-pl{text-align:right}
@@ -146,21 +127,29 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 .stand-team-dead{color:#4b5563;text-decoration:line-through}
 .stand-team-won{color:var(--gl)}
 
-/* Desktop: widen cards */
+/* ═══ MISC ═══ */
+.legend{padding:8px 12px 16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.lg-i{display:flex;align-items:center;gap:4px}
+.lg-d{width:8px;height:8px;border-radius:2px}
+.lg-t{font-size:8px;color:var(--muted);letter-spacing:.5px}
+.footer{padding:10px 12px;border-top:1px solid var(--bdr);text-align:center;font-size:8px;color:var(--dim);letter-spacing:.5px}
+
+/* ═══ DESKTOP ═══ */
 @media(min-width:768px){
   .cards{padding:4px 24px 32px}
   .card{display:grid;grid-template-columns:1.8fr 1.8fr .7fr .8fr .8fr .8fr;align-items:center;gap:10px;padding:12px 16px}
   .card-top{display:contents}
   .card-team{grid-column:1}
   .card-prob{grid-column:3}
+  .card-meta{grid-column:1}
   .score-row,.matchup-wrap{grid-column:2;margin:0;padding:0;background:none;border-radius:0}
   .card-bottom{grid-column:4/7;display:contents}
   .cb-item{background:none;padding:0}
-  .card-meta{grid-column:1}
   .hedge-btn{grid-column:1/-1}
   .hedge-panel{grid-column:1/-1}
   .prob-n{font-size:24px}
   .sc-n{font-size:28px}
+  .standings{padding:12px 24px}
 }
 </style>
 </head>
@@ -195,22 +184,22 @@ body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospa
 </div>
 
 <div class="tab-content active" id="tab-freeman">
-<div class="filters" id="filters"></div>
-<div class="payouts" id="payouts"></div>
-<div class="cards" id="cards"></div>
-
-<div class="legend">
-  <div class="lg-i"><div class="lg-d" style="background:#22c55e"></div><span class="lg-t">75%+ STRONG</span></div>
-  <div class="lg-i"><div class="lg-d" style="background:#65a30d"></div><span class="lg-t">50-74%</span></div>
-  <div class="lg-i"><div class="lg-d" style="background:#d97706"></div><span class="lg-t">25-49%</span></div>
-  <div class="lg-i"><div class="lg-d" style="background:#ea580c"></div><span class="lg-t">10-24%</span></div>
-  <div class="lg-i"><div class="lg-d" style="background:#dc2626"></div><span class="lg-t">&lt;10%</span></div>
-</div>
+  <div class="filters" id="filters"></div>
+  <div class="payouts" id="payouts"></div>
+  <div class="cards" id="cards"></div>
+  <div class="legend">
+    <div class="lg-i"><div class="lg-d" style="background:#22c55e"></div><span class="lg-t">75%+ STRONG</span></div>
+    <div class="lg-i"><div class="lg-d" style="background:#65a30d"></div><span class="lg-t">50-74%</span></div>
+    <div class="lg-i"><div class="lg-d" style="background:#d97706"></div><span class="lg-t">25-49%</span></div>
+    <div class="lg-i"><div class="lg-d" style="background:#ea580c"></div><span class="lg-t">10-24%</span></div>
+    <div class="lg-i"><div class="lg-d" style="background:#dc2626"></div><span class="lg-t">&lt;10%</span></div>
+  </div>
 </div>
 
 <div class="tab-content" id="tab-standings">
-<div class="standings" id="standings"></div>
+  <div class="standings" id="standings"></div>
 </div>
+
 <div class="footer">FREEMAN SYNDICATE — ESPN LIVE — 30s REFRESH — WIN PROB: SCORE DIFF × TIME</div>
 
 <script>
@@ -384,6 +373,20 @@ function copyUpdate(){
     msg+=`\n⏳ STILL TO PLAY: ${pre.map(t=>t.team).join(", ")}\n`;
   }
 
+  // Standings summary
+  const standings=Object.entries(OWNERS).map(([name,teams])=>{
+    const inv=teams.reduce((s,t)=>s+t.cost*t.own,0);
+    const win=teams.reduce((s,t)=>{const r=allResults[t.abbr];if(r&&r.mr>0){const p=PAY.find(x=>x.r===r.mr);if(p)return s+p.c*t.own}return s},0);
+    const alv=teams.filter(t=>{const r=allResults[t.abbr];return !r||r.alive}).length;
+    return{name,inv,win,pl:win-inv,alv,tot:teams.length,roi:inv>0?((win-inv)/inv*100).toFixed(1):"0.0"};
+  }).sort((a,b)=>(b.inv>0?(b.win-b.inv)/b.inv:0)-(a.inv>0?(a.win-a.inv)/a.inv:0));
+
+  const medals=["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣"];
+  msg+=`\n📊 STANDINGS (by ROI):\n`;
+  standings.forEach((o,i)=>{
+    msg+=`${medals[i]} ${o.name}: ${fp(o.pl)} (${o.roi}%) ${o.alv}/${o.tot} alive\n`;
+  });
+
   msg+=`\n🎯 Pot: $6,077,500`;
 
   navigator.clipboard.writeText(msg).then(()=>{
@@ -448,9 +451,14 @@ async function fetchScores(){
       if(SEEDS[opAbbr]) ft.os=SEEDS[opAbbr];
       const u=parseInt(our.score)||0,t=parseInt(op?.score)||0;
       const sn=comp.status?.type?.name||"",clk=comp.status?.displayClock||"",per=comp.status?.period||0,det=comp.status?.type?.shortDetail||comp.status?.type?.detail||"";
-      if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){ft.st="live";ft.us=u;ft.th=t;ft.clk=clk;ft.per=per;ft.prob=sn==="STATUS_HALFTIME"?wp(u,t,1,"0:00"):wp(u,t,per,clk);ft.det=det}
-      else if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD"){ft.us=u;ft.th=t;ft.clk="";ft.det=det;if(u>t){ft.st="final_win";ft.prob=100;ft.mr=Math.max(ft.mr,1)}else{ft.st="final_loss";ft.prob=0}}
-      else{ft.det=det||"Upcoming"}
+      // Build game time from event date for scheduled games
+      let gameTime=det;
+      if(!det||det==="Scheduled"){
+        try{const d=new Date(show.time);gameTime=d.toLocaleString("en-US",{weekday:"short",hour:"numeric",minute:"2-digit",timeZoneName:"short"})}catch(e){gameTime=""}
+      }
+      if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){ft.st="live";ft.us=u;ft.th=t;ft.clk=clk;ft.per=per;ft.prob=sn==="STATUS_HALFTIME"?wp(u,t,1,"0:00"):wp(u,t,per,clk);ft.det=det||gameTime}
+      else if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD"){ft.us=u;ft.th=t;ft.clk="";ft.det=det||"Final";if(u>t){ft.st="final_win";ft.prob=100;ft.mr=Math.max(ft.mr,1)}else{ft.st="final_loss";ft.prob=0}}
+      else{ft.det=gameTime||det||"Upcoming"}
     });
     polls++;
     updateAllResults(games);
@@ -614,9 +622,7 @@ const OWNERS={
 let allResults={};
 
 function updateAllResults(games){
-  // Reset
   allResults={};
-  // For each team abbreviation across all owners, find their games
   const allAbbrs=new Set();
   Object.values(OWNERS).forEach(teams=>teams.forEach(t=>allAbbrs.add(t.abbr)));
 
@@ -626,7 +632,7 @@ function updateAllResults(games){
 
     for(const ev of games){
       const c=ev.competitions?.[0];if(!c)continue;
-      const tm=c.competitors.find(x=>(x.team?.abbreviation||"")==abbr);
+      const tm=c.competitors.find(x=>(x.team?.abbreviation||"")===abbr);
       if(!tm)continue;
       const sn=c.status?.type?.name||"";
       if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD"){
@@ -641,6 +647,16 @@ function updateAllResults(games){
     if(!eliminated&&wins>0) st="advancing";
     const mr=isPlayIn?Math.max(0,wins-1):wins;
     allResults[abbr]={wins,mr,eliminated,alive:!eliminated,st};
+  });
+
+  // Sync Freeman tracker results (these have more robust matching)
+  S.forEach(ft=>{
+    const abbr=ft.m.find(x=>x.length<=4&&x===x.toUpperCase())||ft.m[ft.m.length-1];
+    if(abbr&&allResults[abbr]){
+      if(ft.mr>allResults[abbr].mr) allResults[abbr].mr=ft.mr;
+      if(ft.st==="final_loss"){allResults[abbr].eliminated=true;allResults[abbr].alive=false}
+      if(ft.st==="final_win"||ft.mr>0){allResults[abbr].st=ft.st==="final_loss"?"final_loss":"advancing"}
+    }
   });
 }
 
@@ -660,7 +676,7 @@ function renderStandings(){
   });
 
   // Sort by P&L descending
-  ownerData.sort((a,b)=>b.pl-a.pl);
+  ownerData.sort((a,b)=>parseFloat(b.roi)-parseFloat(a.roi));
 
   const colors={"Freeman":"var(--green)","Buckets":"#60a5fa","Ward":"#c084fc","Adultos":"#f472b6","Hooter":"#fb923c","Kerlin":"#38bdf8"};
 
