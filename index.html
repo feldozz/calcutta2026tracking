@@ -334,7 +334,9 @@ function copyUpdate(){
   const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
   const al=S.filter(t=>t.st!=="final_loss"),wc=S.filter(t=>t.mr>0);
   const lv=S.filter(t=>t.st==="live");
-  const wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
+  let wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
+  if(sideAwards.lowestScore&&sideAwards.lowestScore.owner==="Freeman") wa+=61000;
+  if(sideAwards.largestLoss&&sideAwards.largestLoss.owner==="Freeman") wa+=61000;
   const net=wa-eff,pct=eff>0?((net/eff)*100).toFixed(1):"0.0";
   const pre=S.filter(t=>t.st==="pre");
   const today=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
@@ -374,12 +376,30 @@ function copyUpdate(){
   }
 
   // Standings summary
+  const SIDE_PRIZE=61000;
   const standings=Object.entries(OWNERS).map(([name,teams])=>{
     const inv=teams.reduce((s,t)=>s+t.cost*t.own,0);
-    const win=teams.reduce((s,t)=>{const r=allResults[t.abbr];if(r&&r.mr>0){const p=PAY.find(x=>x.r===r.mr);if(p)return s+p.c*t.own}return s},0);
+    let win=teams.reduce((s,t)=>{const r=allResults[t.abbr];if(r&&r.mr>0){const p=PAY.find(x=>x.r===r.mr);if(p)return s+p.c*t.own}return s},0);
+    if(sideAwards.lowestScore&&sideAwards.lowestScore.owner===name) win+=SIDE_PRIZE;
+    if(sideAwards.largestLoss&&sideAwards.largestLoss.owner===name) win+=SIDE_PRIZE;
     const alv=teams.filter(t=>{const r=allResults[t.abbr];return !r||r.alive}).length;
     return{name,inv,win,pl:win-inv,alv,tot:teams.length,roi:inv>0?((win-inv)/inv*100).toFixed(1):"0.0"};
-  }).sort((a,b)=>(b.inv>0?(b.win-b.inv)/b.inv:0)-(a.inv>0?(a.win-a.inv)/a.inv:0));
+  }).sort((a,b)=>parseFloat(b.roi)-parseFloat(a.roi));
+
+  // Side awards
+  if(sideAwards.lowestScore||sideAwards.largestLoss){
+    msg+=`\n🏅 SIDE AWARDS ($${(SIDE_PRIZE/1000)}K each):\n`;
+    if(sideAwards.lowestScore){
+      const a=sideAwards.lowestScore;
+      const tn=Object.values(OWNERS).flat().find(t=>t.abbr===a.abbr)?.name||a.abbr;
+      msg+=`  📉 Lowest Score: ${tn} (${a.score} pts) → ${a.owner}\n`;
+    }
+    if(sideAwards.largestLoss){
+      const a=sideAwards.largestLoss;
+      const tn=Object.values(OWNERS).flat().find(t=>t.abbr===a.abbr)?.name||a.abbr;
+      msg+=`  💀 Largest Loss: ${tn} (${a.score}-${a.oppScore}, -${a.deficit}) → ${a.owner}\n`;
+    }
+  }
 
   const medals=["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣"];
   msg+=`\n📊 STANDINGS (by ROI):\n`;
@@ -479,7 +499,10 @@ function render(){
 
   const raw=S.reduce((s,t)=>s+t.cost,0),eff=S.reduce((s,t)=>s+t.cost*t.own,0);
   const al=S.filter(t=>t.st!=="final_loss"),lv=S.filter(t=>t.st==="live"),wc=S.filter(t=>t.mr>0).length;
-  const wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
+  let wa=S.reduce((tot,t)=>{if(t.mr>0){const r=PAY.find(p=>p.r===t.mr);if(r)return tot+r.c*t.own}return tot},0);
+  // Add side awards for Freeman
+  if(sideAwards.lowestScore&&sideAwards.lowestScore.owner==="Freeman") wa+=61000;
+  if(sideAwards.largestLoss&&sideAwards.largestLoss.owner==="Freeman") wa+=61000;
   const net=wa-eff,pct=eff>0?((net/eff)*100).toFixed(1):"0.0";
 
   $("deployed").textContent=fm(raw);$("deployedEff").textContent=fm(eff)+" eff.";
@@ -620,11 +643,24 @@ const OWNERS={
 
 // Track all teams' results globally (abbr → {wins, eliminated, status})
 let allResults={};
+let sideAwards={lowestScore:null,largestLoss:null}; // {abbr, score, opponent, deficit, owner}
+
+// Map abbreviation to owner
+function getOwner(abbr){
+  for(const[name,teams]of Object.entries(OWNERS)){
+    if(teams.find(t=>t.abbr===abbr))return name;
+  }
+  return null;
+}
 
 function updateAllResults(games){
   allResults={};
   const allAbbrs=new Set();
   Object.values(OWNERS).forEach(teams=>teams.forEach(t=>allAbbrs.add(t.abbr)));
+
+  // Side awards tracking
+  let lowScore={score:999,abbr:"",opp:"",owner:""};
+  let bigLoss={deficit:0,abbr:"",score:0,oppScore:0,opp:"",owner:""};
 
   allAbbrs.forEach(abbr=>{
     let wins=0,eliminated=false,alive=true,st="pre";
@@ -638,6 +674,13 @@ function updateAllResults(games){
       if(sn==="STATUS_FINAL"||sn==="STATUS_END_PERIOD"){
         const opp=c.competitors.find(x=>x.id!==tm.id);
         const u=parseInt(tm.score)||0,t=parseInt(opp?.score)||0;
+        const oppName=opp?.team?.shortDisplayName||opp?.team?.abbreviation||"";
+
+        // Track side awards for all completed games
+        if(u<lowScore.score){lowScore={score:u,abbr,opp:oppName,owner:getOwner(abbr)||"?"}}
+        const deficit=t-u;
+        if(deficit>bigLoss.deficit){bigLoss={deficit,abbr,score:u,oppScore:t,opp:oppName,owner:getOwner(abbr)||"?"}}
+
         if(u>t) wins++;
         else{eliminated=true;alive=false;st="final_loss"}
       }else if(sn==="STATUS_IN_PROGRESS"||sn==="STATUS_HALFTIME"){
@@ -648,6 +691,10 @@ function updateAllResults(games){
     const mr=isPlayIn?Math.max(0,wins-1):wins;
     allResults[abbr]={wins,mr,eliminated,alive:!eliminated,st};
   });
+
+  // Store side awards
+  sideAwards.lowestScore=lowScore.score<999?lowScore:null;
+  sideAwards.largestLoss=bigLoss.deficit>0?bigLoss:null;
 
   // Sync Freeman tracker results (these have more robust matching)
   S.forEach(ft=>{
@@ -662,25 +709,50 @@ function updateAllResults(games){
 
 function renderStandings(){
   const el=$("standings");
+  const SIDE_PRIZE=61000;
+
   const ownerData=Object.entries(OWNERS).map(([name,teams])=>{
     const invested=teams.reduce((s,t)=>s+t.cost*t.own,0);
-    const winnings=teams.reduce((s,t)=>{
+    let winnings=teams.reduce((s,t)=>{
       const r=allResults[t.abbr];
       if(r&&r.mr>0){const p=PAY.find(x=>x.r===r.mr);if(p)return s+p.c*t.own}
       return s;
     },0);
+    // Add side awards
+    let awards=[];
+    if(sideAwards.lowestScore&&sideAwards.lowestScore.owner===name){winnings+=SIDE_PRIZE;awards.push("📉 Lowest Score")}
+    if(sideAwards.largestLoss&&sideAwards.largestLoss.owner===name){winnings+=SIDE_PRIZE;awards.push("💀 Largest Loss")}
     const aliveCount=teams.filter(t=>{const r=allResults[t.abbr];return !r||r.alive}).length;
     const pl=winnings-invested;
     const roi=invested>0?((pl/invested)*100).toFixed(1):"0.0";
-    return{name,teams,invested,winnings,aliveCount,total:teams.length,pl,roi};
+    return{name,teams,invested,winnings,aliveCount,total:teams.length,pl,roi,awards};
   });
 
-  // Sort by P&L descending
   ownerData.sort((a,b)=>parseFloat(b.roi)-parseFloat(a.roi));
 
   const colors={"Freeman":"var(--green)","Buckets":"#60a5fa","Ward":"#c084fc","Adultos":"#f472b6","Hooter":"#fb923c","Kerlin":"#38bdf8"};
 
-  el.innerHTML=`<div class="standings-title">🏆 LEAGUE STANDINGS</div>`+
+  // Side awards banner
+  let awardsHTML=`<div style="margin-bottom:12px">`;
+  if(sideAwards.lowestScore){
+    const a=sideAwards.lowestScore;
+    const teamName=Object.values(OWNERS).flat().find(t=>t.abbr===a.abbr)?.name||a.abbr;
+    awardsHTML+=`<div style="padding:10px;margin-bottom:6px;border-radius:6px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <div><span style="font-size:14px">📉</span> <span style="font-size:11px;font-weight:700;color:var(--rl)">LOWEST SCORE</span> <span style="font-size:11px;color:var(--text)">${teamName} scored ${a.score} vs ${a.opp}</span></div>
+      <div><span style="font-size:10px;color:var(--muted)">Held by</span> <span style="font-size:11px;font-weight:700;color:${colors[a.owner]||"var(--text)"}">${a.owner}</span> <span style="font-size:11px;font-weight:700;color:var(--gl)">${fm(SIDE_PRIZE)}</span></div>
+    </div>`;
+  }
+  if(sideAwards.largestLoss){
+    const a=sideAwards.largestLoss;
+    const teamName=Object.values(OWNERS).flat().find(t=>t.abbr===a.abbr)?.name||a.abbr;
+    awardsHTML+=`<div style="padding:10px;margin-bottom:6px;border-radius:6px;background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <div><span style="font-size:14px">💀</span> <span style="font-size:11px;font-weight:700;color:var(--rl)">LARGEST LOSS</span> <span style="font-size:11px;color:var(--text)">${teamName} ${a.score}-${a.oppScore} vs ${a.opp} (${a.deficit} pts)</span></div>
+      <div><span style="font-size:10px;color:var(--muted)">Held by</span> <span style="font-size:11px;font-weight:700;color:${colors[a.owner]||"var(--text)"}">${a.owner}</span> <span style="font-size:11px;font-weight:700;color:var(--gl)">${fm(SIDE_PRIZE)}</span></div>
+    </div>`;
+  }
+  awardsHTML+=`</div>`;
+
+  el.innerHTML=`<div class="standings-title">🏆 LEAGUE STANDINGS</div>`+awardsHTML+
     ownerData.map((o,i)=>{
       const c=colors[o.name]||"var(--text)";
       const plCol=o.pl>=0?"var(--gl)":"var(--rl)";
@@ -692,10 +764,12 @@ function renderStandings(){
         return`<span class="${cls}">${t.name}${ownTag}${roundLabel}</span>`;
       }).join(" · ");
 
+      const awardBadges=o.awards.length>0?`<div style="font-size:9px;margin-top:4px">${o.awards.map(a=>`<span style="background:rgba(220,38,38,.2);color:var(--rl);padding:2px 6px;border-radius:3px;margin-right:4px;font-weight:600">${a} +${fm(61000)}</span>`).join("")}</div>`:"";
+
       return`<div class="stand-card" style="border-left:4px solid ${c}">
         <div class="stand-top">
           <div class="stand-rank" style="color:${c}">${i+1}</div>
-          <div class="stand-name" style="color:${c}">${o.name}</div>
+          <div class="stand-name" style="color:${c}">${o.name}${awardBadges}</div>
           <div class="stand-pl">
             <div class="stand-pl-v" style="color:${plCol}">${fp(o.pl)}</div>
             <div class="stand-pl-pct" style="color:${plCol}">${o.pl>=0?"+":""}${o.roi}%</div>
